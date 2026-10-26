@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -383,7 +382,7 @@
   <main style="padding-bottom: 0; background-color: var(--bg-primary); transition: background-color 0.08s linear;">
     <div class="container">
       <section class="main-logo">
-        <img id="main-logo-img" src="https://res.cloudinary.com/dv8uywtbo/image/upload/yaaakoootvv_yhfqsa.png" alt="Logo">
+        <img id="main-logo-img" src="https://res.cloudinary.com/dv8uywtbo/image/upload/yashintv_main_xtgfdr.png" alt="Logo">
       </section>
 
       <section id="player-section-1" class="info-card player-section">
@@ -636,8 +635,11 @@
             const matchData = data[matchId];
             if (!matchData) throw new Error("");
 
-            let linkObj = matchData[`link${linkId}`];
-            if (!linkObj || !linkObj.url) linkObj = matchData.common;
+            // CHECK COMMON FIRST, THEN SPECIFIC
+            let linkObj = matchData.common;
+            if (!linkObj || !linkObj.url) {
+                linkObj = matchData[`link${linkId}`];
+            }
             if (!linkObj || !linkObj.url) throw new Error("");
 
             const url = linkObj.url;
@@ -724,7 +726,7 @@
       if (!button) return;
 
       button.addEventListener("click", async function() {
-        const url = "https://www.yakotv.me/"; // CHANGED TO YAKOTV
+        const url = "https://www.yakotv.me/";
         let copied = false;
 
         try {
