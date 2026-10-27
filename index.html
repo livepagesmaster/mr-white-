@@ -16,7 +16,7 @@
     :root {
       --primary-color: #2563eb;
       --secondary-color: #1e40af;
-      --accent-color: #1e40af;
+      --accent-color: #f59e0b;
       --text-primary: #1f2937;
       --text-secondary: #6b7280;
       --bg-primary: #ffffff;
@@ -382,7 +382,7 @@
   <main style="padding-bottom: 0; background-color: var(--bg-primary); transition: background-color 0.08s linear;">
     <div class="container">
       <section class="main-logo">
-        <img id="main-logo-img" src="https://res.cloudinary.com/dv8uywtbo/image/upload/yaaakoootvv_yhfqsa.png" alt="Logo">
+        <img id="main-logo-img" src="https://res.cloudinary.com/dv8uywtbo/image/upload/yashintv_main_xtgfdr.png" alt="Logo">
       </section>
 
       <section id="player-section-1" class="info-card player-section">
@@ -405,7 +405,7 @@
 
           <div id="html5-video-container-1" class="player-container" style="display: block;">
             <video id="videoPlayer-1" controls autoplay muted playsinline
-                   oncontextmenu="return false;"
+                   oncontextmenu="return false"
                    controlsList="nodownload noremoteplayback"
                    disablePictureInPicture
                    class="plyr">
@@ -417,10 +417,9 @@
           <div id="iframe-player-container-1" class="iframe-container" style="display: none;">
             <iframe id="embedded-player-1"
                     title="Live stream player"
-                    frameborder="0"
-                    allow="autoplay; fullscreen; picture-in-picture"
+                    allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
                     allowfullscreen
-                    scrolling="no"></iframe>
+                    referrerpolicy="no-referrer"></iframe>
           </div>
 
           <button id="reloadBtn-1" class="action-btn refresh-btn" type="button">
@@ -633,25 +632,28 @@
         .then(res => res.json())
         .then(data => {
             const matchData = data[matchId];
-            if (!matchData) throw new Error("");
+            if (!matchData) throw new Error("match not found");
 
-            // CHECK COMMON FIRST, THEN SPECIFIC
+            /* Prefer common first, then specific linkN */
             let linkObj = matchData.common;
             if (!linkObj || !linkObj.url) {
                 linkObj = matchData[`link${linkId}`];
             }
-            if (!linkObj || !linkObj.url) throw new Error("");
+            if (!linkObj || !linkObj.url) throw new Error("link not found");
 
             const url = linkObj.url;
-            const type = linkObj.type || 'redirect';
 
-            if (type === 'redirect') {
-                window.location.href = url;
-            } else if (type === 'iframe') {
-                videoBox.style.display = "none";
-                iframe.src = url;
-                iframeBox.style.display = "block";
-            } else if (type === 'hls') {
+            /* Auto-detect type. Explicit 'hls' / 'iframe' is honored;
+               'redirect' is intentionally ignored so embeds can never leave
+               this page. */
+            let type;
+            if (linkObj.type === 'hls' || linkObj.type === 'iframe') {
+                type = linkObj.type;
+            } else {
+                type = /\.m3u8(\?|#|$)/i.test(url) ? 'hls' : 'iframe';
+            }
+
+            if (type === 'hls') {
                 videoBox.style.display = "block";
                 iframeBox.style.display = "none";
 
@@ -712,10 +714,19 @@
                   video._plyrInstance = new Plyr(video);
                   video.play().catch(function() {});
                 }
+            } else {
+                /* iframe — always embeds inside the player, never navigates */
+                videoBox.style.display = "none";
+                iframeBox.style.display = "block";
+                iframe.onerror = function () {
+                  console.warn('Embed failed to load — host may block framing (X-Frame-Options).');
+                };
+                iframe.src = url;
             }
         })
         .catch(() => {
             videoBox.style.display = "none";
+            iframeBox.style.display = "none";
             noStream.style.display = "flex";
         });
     }
