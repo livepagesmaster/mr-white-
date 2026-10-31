@@ -16,7 +16,7 @@
     :root {
       --primary-color: #2563eb;
       --secondary-color: #1e40af;
-      --accent-color: #1e40af;
+      --accent-color: #f59e0b;
       --text-primary: #1f2937;
       --text-secondary: #6b7280;
       --bg-primary: #ffffff;
@@ -63,14 +63,12 @@
       margin: 0 auto;
       width: 100%;
       transition: background-color 0.08s linear, border-color 0.08s linear, box-shadow 0.08s linear;
+      opacity: 0;
+      animation: fadeInUp 0.6s ease forwards;
     }
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
-    }
-    .info-card {
-      opacity: 0;
-      animation: fadeInUp 0.6s ease forwards;
     }
     .player-wrapper {
       width: 100%;
@@ -417,9 +415,10 @@
           <div id="iframe-player-container-1" class="iframe-container" style="display: none;">
             <iframe id="embedded-player-1"
                     title="Live stream player"
-                    allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                    frameborder="0"
+                    allow="autoplay; fullscreen; picture-in-picture"
                     allowfullscreen
-                    referrerpolicy="no-referrer"></iframe>
+                    scrolling="no"></iframe>
           </div>
 
           <button id="reloadBtn-1" class="action-btn refresh-btn" type="button">
@@ -634,7 +633,6 @@
             const matchData = data[matchId];
             if (!matchData) throw new Error("match not found");
 
-            /* Prefer common first, then specific linkN */
             let linkObj = matchData.common;
             if (!linkObj || !linkObj.url) {
                 linkObj = matchData[`link${linkId}`];
@@ -643,9 +641,8 @@
 
             const url = linkObj.url;
 
-            /* Auto-detect type. Explicit 'hls' / 'iframe' is honored;
-               'redirect' is intentionally ignored so embeds can never leave
-               this page. */
+            /* explicit hls/iframe honored; otherwise auto-detect by extension.
+               'redirect' is intentionally ignored so embeds can never leave the page. */
             let type;
             if (linkObj.type === 'hls' || linkObj.type === 'iframe') {
                 type = linkObj.type;
@@ -654,6 +651,7 @@
             }
 
             if (type === 'hls') {
+                /* ---- HLS: unchanged ---- */
                 videoBox.style.display = "block";
                 iframeBox.style.display = "none";
 
@@ -715,13 +713,17 @@
                   video.play().catch(function() {});
                 }
             } else {
-                /* iframe — always embeds inside the player, never navigates */
+                /* ---- iframe: matches reference player behavior ----
+                   1. hide the video container
+                   2. set src FIRST (element is still display:none but dimensions
+                      are computed by CSS aspect-ratio, so embed sees 16:9)
+                   3. then reveal iframe container
+                   4. hide the "no stream" placeholder
+                   No referrerpolicy / sandbox / onerror — same as reference. */
                 videoBox.style.display = "none";
-                iframeBox.style.display = "block";
-                iframe.onerror = function () {
-                  console.warn('Embed failed to load — host may block framing (X-Frame-Options).');
-                };
                 iframe.src = url;
+                iframeBox.style.display = "block";
+                noStream.style.display = "none";
             }
         })
         .catch(() => {
@@ -809,5 +811,4 @@
   </script>
 
 </body>
-  <script disable-devtool-auto src="https://cdn.jsdelivr.net/npm/disable-devtool@latest"></script>
 </html>
