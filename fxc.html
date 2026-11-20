@@ -2,58 +2,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
+<title>DPlayer</title>
 
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <title>yk Live</title>
+<!-- HLS + DPlayer -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js"></script>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+}
 
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      overflow: hidden;
-    }
+#dplayer {
+    width: 100%;
+    height: 100%;
+}
 
-    .player-container {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-    }
-
-    iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-  </style>
+#waitCountdown {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    z-index: 9999;
+}
+#waitCountdown h2 {
+    margin: 0 0 15px;
+    font-weight: normal;
+}
+#waitCountdown .count {
+    font-size: 64px;
+    font-weight: bold;
+    color: #00e0ff;
+}
+</style>
 </head>
 
 <body>
 
-  <div class="player-container">
-    <iframe
-      src="https://mini.allinonereborn.site/fcw/player_world.html?url=https%3A%2F%2Fallinonereborn2.online%2Ffctest%2Fplaylists%2Fmatch_4250366_ENG%2Fenglish.m3u8"
-      title="Live Video Player"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allowfullscreen>
-    </iframe>
-  </div>
+<div id="dplayer"></div>
+
+<!-- Wait countdown overlay -->
+<div id="waitCountdown">
+    <h2>Video not loaded yet...</h2>
+    <div class="count" id="countNum">5</div>
+    <h2>Auto refreshing...</h2>
+</div>
+
+<script>
+function getParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
+const streamUrl = getParam("src");
+
+if(!streamUrl){
+    document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20%;'>No Stream Provided</h2>";
+    throw new Error("Missing src parameter");
+}
+
+const dp = new DPlayer({
+    container: document.getElementById('dplayer'),
+    autoplay: true,
+    live: true,
+    preload: "auto",
+    volume: 0.7,
+    video: {
+        url: streamUrl,
+        type: "hls"
+    },
+    lang: "en",
+    logo: "https://dns-tv.pages.dev/logo/image.png",
+    pluginOptions: {
+        hls: {
+            enableWorker: true,
+            lowLatencyMode: true
+        }
+    }
+});
+
+/* ---- Auto-refresh if video not loaded at first ---- */
+let videoLoaded = false;
+
+dp.on('loadedmetadata', () => {
+    videoLoaded = true;
+});
+
+dp.on('playing', () => {
+    videoLoaded = true;
+});
+
+const waitOverlay = document.getElementById('waitCountdown');
+const countNum = document.getElementById('countNum');
+
+setTimeout(() => {
+    if (!videoLoaded) {
+        waitOverlay.style.display = 'flex';
+        let remaining = 5;
+        countNum.textContent = remaining;
+
+        const countdown = setInterval(() => {
+            remaining--;
+            countNum.textContent = remaining;
+            if (remaining <= 0) {
+                clearInterval(countdown);
+                location.reload();
+            }
+        }, 1000);
+    }
+}, 1000); // check 1 second after init
+
+/* Optional auto-recover if stream crashes */
+dp.on('error', () => {
+    console.log("Stream error, retrying...");
+    setTimeout(() => {
+        dp.switchVideo({
+            url: streamUrl,
+            type: "hls"
+        });
+    }, 3000);
+});
+</script>
 
 </body>
 </html>
-
